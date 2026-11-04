@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mesa Muse · Control room</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+    <symbol id="i-cut" viewBox="0 0 24 24"><circle cx="6" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M8.5 7.5 20 19M8.5 16.5 20 5"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 19.5 5.3 15A8 8 0 1 1 9 18.7Z"/></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24"><path d="M5 8h14l-1 12H6Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+  </svg>
+
+  <header class="bar">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <div>
+        <h1>Mesa Muse</h1>
+        <p>A shop on WhatsApp from one voice note and one photo</p>
+      </div>
+    </div>
+    <ul class="meters" id="meters" aria-label="Meta model calls"></ul>
+    <span class="live" id="live" data-state="connecting">Connecting</span>
+  </header>
+
+  <main class="room">
+    <section class="col chats" aria-labelledby="chats-h">
+      <div class="col-head">
+        <h2 id="chats-h"><svg class="ic"><use href="#i-chat"/></svg>WhatsApp</h2>
+        <div class="tabs" id="tabs" role="tablist" aria-label="Conversations"></div>
+      </div>
+      <ol class="thread" id="thread" aria-live="polite"></ol>
+    </section>
+
+    <section class="col flow" aria-labelledby="flow-h">
+      <div class="col-head">
+        <h2 id="flow-h"><svg class="ic"><use href="#i-spark"/></svg>Meta models at work</h2>
+        <p class="sub">Every call, as it happens</p>
+      </div>
+      <ol class="steps" id="steps" aria-live="polite"></ol>
+    </section>
+
+    <section class="col shops" aria-labelledby="shops-h">
+      <div class="col-head">
+        <h2 id="shops-h"><svg class="ic"><use href="#i-bag"/></svg>Shops</h2>
+      </div>
+      <div id="shoplist" class="shoplist"></div>
+    </section>
+  </main>
+
+  <script src="/app.js" type="module"></script>
+</body>
+</html>
