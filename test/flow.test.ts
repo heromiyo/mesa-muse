@@ -252,6 +252,14 @@ test('customer arrives by link, adds to cart, orders; owner accepts', async () =
   await tap(OWNER, 'order:1:accept', '✅ Accept');
   [m] = await out(1);
   assert.match(textOf(m!), /already handled/);
+
+  await tap(OWNER, 'order:99:accept', '✅ Accept');
+  [m] = await out(1);
+  assert.match(textOf(m!), /can't find order #99/);
+
+  await tap(OWNER, 'order:abc:accept', '✅ Accept');
+  [m] = await out(1);
+  assert.match(textOf(m!), /can't find that order/);
 });
 
 test('WhatsApp retries of the same message are handled once', async () => {

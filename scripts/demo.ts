@@ -5,9 +5,9 @@
  * WhatsApp Graph API. Used to record the demo video while live model access is
  * pending; the control room shows a banner saying so.
  *
- * Open http://localhost:8790 and watch. Nothing leaves this machine.
+ * Open http://127.0.0.1:8790 and watch. Nothing leaves this machine.
  */
-import { createServer, type IncomingMessage } from 'node:http';
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { createHmac } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync } from 'node:fs';
@@ -18,10 +18,10 @@ import sharp from 'sharp';
 const dir = mkdtempSync(path.join(tmpdir(), 'muse-demo-'));
 const FAKE = 8791, APP = Number(process.env.DEMO_PORT ?? 8790);
 Object.assign(process.env, {
-  DB_PATH: path.join(dir, 'demo.db'), DATA_DIR: dir, PORT: String(APP), PUBLIC_URL: `http://localhost:${APP}`,
-  MODEL_API_KEY: 'LLM|demo|demo', MODEL_API_BASE: `http://localhost:${FAKE}/v1`,
+  DB_PATH: path.join(dir, 'demo.db'), DATA_DIR: dir, PORT: String(APP), HOST: '127.0.0.1', PUBLIC_URL: `http://127.0.0.1:${APP}`,
+  MODEL_API_KEY: 'LLM|demo|demo', MODEL_API_BASE: `http://127.0.0.1:${FAKE}/v1`,
   WA_TOKEN: 'EAAdemo', WA_PHONE_NUMBER_ID: '100', WA_VERIFY_TOKEN: 'demo', WA_APP_SECRET: 'demo-secret',
-  WA_DISPLAY_NUMBER: '260970000000', WA_GRAPH: `http://localhost:${FAKE}/graph`, ALLOW_OPEN_CONTROL_ROOM: '1',
+  WA_DISPLAY_NUMBER: '260970000000', WA_GRAPH: `http://127.0.0.1:${FAKE}/graph`, ALLOW_OPEN_CONTROL_ROOM: '1',
   DEMO_NOTICE: 'Simulation: real Mesa Muse code with scripted Meta model and WhatsApp responses — live Meta Model API access is pending account billing.',
 });
 
@@ -49,7 +49,7 @@ const cutPng = (p: (typeof PRODUCTS)[number]) => sharp(Buffer.from(art(p))).png(
 
 // ---------- WhatsApp Graph + Meta Model API stand-ins ----------
 const media = new Map<string, Buffer>();
-let mediaSeq = 0, removeNext = false;
+let mediaSeq = 0;
 const turns: any[] = [];
 async function read(req: IncomingMessage) { const c: Buffer[] = []; for await (const x of req) c.push(x as Buffer); return Buffer.concat(c); }
 
@@ -60,21 +60,21 @@ const answers: Record<string, (b: any) => unknown> = {
     const n = b.messages[1].content.filter((c: any) => c.type === 'image_url').length;
     return { items: PRODUCTS.slice(0, n).map((p, i) => ({ number: i + 1, name: p.name, description: p.note, price_kwacha: p.k })) };
   },
-  edits: () => removeNext
-    ? { ops: [], reply: 'Nshili nalumfwa — no change.' }
-    : { ops: [{ op: 'set_price', number: 2, value: '90' }], reply: 'Cawama! Cooking oil 2.5L is now K90.' },
+  edits: () => ({ ops: [{ op: 'set_price', number: 2, value: '90' }], reply: 'Cawama! Cooking oil 2.5L is now K90.' }),
   note: () => ({ message: 'Natotela, Chanda! Bana Bupe accepted your order #1 — K90 for 2 × Orange squash. Pay cash or MTN MoMo on pickup at stall 14 today at 17:00.' }),
 };
 const latency: Record<string, number> = { shop_profile: 2300, stock_plan: 2800, catalog: 3400, edits: 1600, note: 1200, turn: 1900 };
 
-createServer(async (req, res) => {
+createServer((req, res) => { fake(req, res).catch((e) => { res.writeHead(500); res.end(String(e)); }); }).listen(FAKE, '127.0.0.1');
+
+async function fake(req: IncomingMessage, res: ServerResponse) {
   const url = new URL(req.url!, 'http://x'), raw = await read(req);
   const json = (b: unknown) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(b)); };
   if (url.pathname.startsWith('/graph/')) {
     const p = url.pathname.slice(7);
     if (p === '100/messages') return json({ messages: [{ id: `wamid.${Date.now()}` }] });
     if (p === '100/media') return json({ id: `${900000 + ++mediaSeq}` });
-    if (media.has(p)) return json({ url: `http://localhost:${FAKE}/dl/${p}` });
+    if (media.has(p)) return json({ url: `http://127.0.0.1:${FAKE}/dl/${p}` });
     res.writeHead(404); return res.end();
   }
   if (url.pathname.startsWith('/dl/')) return res.end(media.get(url.pathname.slice(4)));
@@ -96,7 +96,7 @@ createServer(async (req, res) => {
       : 'Mwapoleni, nalefwaya ama Mazoe yabili, nkesa ku 5 icungulo.' });
   }
   res.writeHead(404); res.end();
-}).listen(FAKE);
+}
 
 // ---------- demo media ----------
 const ogg = path.join(dir, 'voice.ogg');
@@ -133,7 +133,7 @@ async function hook(from: string, message: Record<string, unknown>) {
     messages: [{ id: `demo.${++seq}`, from, timestamp: '0', ...message }],
   } }] }] });
   const sig = 'sha256=' + createHmac('sha256', 'demo-secret').update(body).digest('hex');
-  await fetch(`http://localhost:${APP}/webhook`, { method: 'POST', body, headers: { 'content-type': 'application/json', 'x-hub-signature-256': sig } });
+  await fetch(`http://127.0.0.1:${APP}/webhook`, { method: 'POST', body, headers: { 'content-type': 'application/json', 'x-hub-signature-256': sig } });
 }
 const text = (from: string, body: string) => hook(from, { type: 'text', text: { body } });
 const tap = (from: string, id: string, title: string) => hook(from, { type: 'interactive', interactive: { type: 'button_reply', button_reply: { id, title } } });
@@ -143,7 +143,7 @@ const t0 = Date.now();
 console.log(`T0 ${t0}`);
 const step = (label: string) => console.log(`STEP ${((Date.now() - t0) / 1000).toFixed(1)} ${label}`);
 const beat = (s: number) => sleep(s * 1000 * pace);
-console.log(`Control room: http://localhost:${APP}  (starting in 6 s)`);
+console.log(`Control room: http://127.0.0.1:${APP}  (starting in 6 s)`);
 await beat(6);
 
 step('Bupe, a market trader, messages Mesa Muse on WhatsApp');
@@ -159,7 +159,7 @@ await text(OWNER, 'Number 2 ni K90');                                    await b
 step('One tap opens the shop: QR code + WhatsApp link');
 await tap(OWNER, 'catalog:publish', '🚀 Open my shop');                    await beat(7);
 
-const shop = await (await fetch(`http://localhost:${APP}/api/state`)).json() as { shops: { code: string }[] };
+const shop = await (await fetch(`http://127.0.0.1:${APP}/api/state`)).json() as { shops: { code: string }[] };
 step('A customer arrives through the link and sees product cut-outs');
 await text(BUYER, `Hi Bana Bupe Groceries! #${shop.shops[0]!.code}`);   await beat(8);
 turns.push({ tool_calls: [{ id: 'c1', type: 'function', function: { name: 'show_products', arguments: JSON.stringify({ product_ids: [1] }) } }] });

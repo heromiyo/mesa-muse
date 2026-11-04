@@ -185,6 +185,7 @@ export async function ownerTurn(m: Inbound, shop: Shop) {
   if (shop.answering && (m.kind === 'text' || m.kind === 'voice')) return relayAnswer(m, shop);
   if (id.startsWith('order:')) {
     const [, oid, verdict] = id.split(':');
+    if (!/^\d+$/.test(oid ?? '')) return sendText(m.from, "I can't find that order.");
     return onOrderDecision(m.from, shop, Number(oid), verdict === 'accept');
   }
 

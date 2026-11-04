@@ -1,6 +1,6 @@
 # Submission draft — Meta Global AI Developer Hackathon
 
-Paste-ready answers. Fill the bracketed items once the live demo and video exist.
+Paste-ready answers for the submission form.
 
 **Project name:** Mesa Muse
 

@@ -110,7 +110,9 @@ function shops() {
 
 const stageLabel = (s) => ({ profile: 'Listening', confirm_profile: 'Confirming', stock: 'Waiting for photo', review: 'Reviewing catalog', live: 'Open' })[s] ?? s;
 
-function notice() { const n = $('#notice'); n.hidden = !state.notice; n.textContent = state.notice || ''; document.documentElement.style.setProperty('--notice-h', `${n.hidden ? 0 : n.offsetHeight}px`); }
+function noticeH() { const n = $('#notice'); document.documentElement.style.setProperty('--notice-h', `${n.hidden ? 0 : n.offsetHeight}px`); }
+function notice() { const n = $('#notice'); n.hidden = !state.notice; n.textContent = state.notice || ''; noticeH(); }
+addEventListener('resize', noticeH);
 function render() { notice(); meters(); chats(); steps(); shops(); }
 
 async function load() {
