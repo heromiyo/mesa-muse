@@ -12,9 +12,15 @@ Paste-ready answers. Fill the bracketed items once the live demo and video exist
 
 **GitHub (public):** https://github.com/heromiyo/mesa-muse
 
-**Demo video (3 min):** [link]
+**Demo video:** docs/mesa-muse-demo.mp4 in the repo (1:50) — or [YouTube link]
 
-**Live product:** [public URL of the control room] · WhatsApp: [test number]
+**Live product:** https://muse.zambrite.com (control room; health at /health). WhatsApp number: [pending Cloud API token]
+
+## Status — please read
+
+Everything in the repository runs, and it is deployed at muse.zambrite.com. We could not run it against the live Meta Model API before the deadline. Our dev.meta.ai account is restricted because the temporary card hold failed, although the $150 hackathon credits are on the account.
+
+So the demo video plays the real Mesa Muse code (webhook, router, owner and customer logic, WhatsApp Cloud API client, control room) with **scripted** model and WhatsApp responses. The video says so on screen. The Meta API calls use the shapes from Meta's own cookbook. `npm run doctor` reaches every endpoint (Muse Spark, Muse Voice Transcribe, SAM 3.1) and gets a clean authentication answer. Seventeen automated tests and two browser tests pass. Once the account is unblocked, it needs only the API key: `npm run doctor`, then live.
 
 ## The problem
 

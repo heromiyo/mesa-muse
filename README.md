@@ -4,6 +4,8 @@
 
 A market trader in Lusaka messages Mesa Muse on WhatsApp. They describe their shop in a voice note, in Bemba, Nyanja or English, and send one photo of their table or shelf. A few seconds later they have a priced catalogue with every product cut out of the photo, a shop link and a QR code for their stall. From then on an assistant answers customers in their own language, shows them product photos, takes orders and sends each order back to the owner on WhatsApp for one-tap approval.
 
+Live control room: https://muse.zambrite.com · Demo video: [docs/mesa-muse-demo.mp4](docs/mesa-muse-demo.mp4) (scripted model replies, see below) · `npm run demo` replays it locally.
+
 Built for the **Meta Global AI Developer Hackathon** (Oct 26 – Nov 4, 2026), track: Startups, theme: *Build for Your World*.
 
 ## Meta models used
@@ -30,6 +32,10 @@ WhatsApp ──webhook──▶ src/server.ts ──▶ src/brain/router.ts
             src/whatsapp/cloud.ts          Cloud API: send, upload, download, signature check
             public/                        Control room: live chats, model calls, shops
 ```
+
+## Status
+
+The code is complete and deployed. It has not yet run against the live Meta Model API: our account is restricted until a card hold clears. The demo video and `npm run demo` run the real code with scripted model and WhatsApp responses, and say so on screen. `npm run doctor` checks the live models as soon as a key is set.
 
 ## Run it
 

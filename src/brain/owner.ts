@@ -151,7 +151,8 @@ async function liveOwner(m: Inbound, shop: Shop) {
 
 export async function onOrderDecision(to: string, shop: Shop, orderId: number, accept: boolean) {
   const order = db.prepare('SELECT * FROM orders WHERE id = ? AND shop_id = ?').get(orderId, shop.id) as Order | undefined;
-  if (!order || order.status !== 'new') return sendText(to, 'That order was already handled.');
+  if (!order) return sendText(to, `I can't find order #${orderId}.`);
+  if (order.status !== 'new') return sendText(to, 'That order was already handled.');
   db.prepare('UPDATE orders SET status = ? WHERE id = ?').run(accept ? 'accepted' : 'declined', orderId);
   const note = await models.museJson<{ message: string }>({
     task: 'order decision → customer message', phone: order.customer_phone,

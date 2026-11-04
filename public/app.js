@@ -110,7 +110,8 @@ function shops() {
 
 const stageLabel = (s) => ({ profile: 'Listening', confirm_profile: 'Confirming', stock: 'Waiting for photo', review: 'Reviewing catalog', live: 'Open' })[s] ?? s;
 
-function render() { meters(); chats(); steps(); shops(); }
+function notice() { const n = $('#notice'); n.hidden = !state.notice; n.textContent = state.notice || ''; document.documentElement.style.setProperty('--notice-h', `${n.hidden ? 0 : n.offsetHeight}px`); }
+function render() { notice(); meters(); chats(); steps(); shops(); }
 
 async function load() {
   const res = await fetch('/api/state');

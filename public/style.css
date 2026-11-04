@@ -53,11 +53,14 @@ img { display: block; max-width: 100%; }
 .live[data-state='on']::before { background: #5fd38d; box-shadow: 0 0 0 4px rgb(95 211 141 / .18); }
 .live[data-state='off']::before { background: #e5675c; }
 
+/* Simulation banner (npm run demo) */
+.notice { margin: 0; padding: 8px 24px; background: #f2c14e; color: #3a2c05; font-size: .875rem; font-weight: 600; text-align: center; }
+
 /* Three zones */
 .room {
   flex: 1; display: grid; gap: 16px; padding: 16px;
   grid-template-columns: minmax(300px, 1fr) minmax(340px, 1.15fr) minmax(320px, 1fr);
-  min-height: 0; height: calc(100vh - 66px);
+  min-height: 0; height: calc(100vh - 66px - var(--notice-h, 0px));
 }
 .col { display: flex; flex-direction: column; min-height: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
 .col-head { padding: 16px 18px 12px; border-bottom: 1px solid var(--line); background: var(--card); }

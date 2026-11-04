@@ -57,7 +57,7 @@ app.get('/api/state', (c) => {
   const traces = db.prepare('SELECT * FROM traces ORDER BY id DESC LIMIT 120').all().reverse()
     .map((t) => ({ ...(t as Record<string, unknown>), detail: JSON.parse((t as { detail: string }).detail) }));
   const totals = db.prepare('SELECT model, COUNT(*) n, ROUND(AVG(ms)) avg_ms, SUM(ok) ok FROM traces GROUP BY model').all();
-  return c.json({ shops, messages, traces, totals });
+  return c.json({ shops, messages, traces, totals, notice: process.env.DEMO_NOTICE ?? '' });
 });
 
 app.get('/api/events', (c) => streamSSE(c, async (stream) => {

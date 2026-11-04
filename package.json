@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "doctor": "node --env-file-if-exists=.env scripts/doctor.ts",
     "webhook": "node --env-file-if-exists=.env scripts/webhook.ts",
-    "tunnel": "bash scripts/tunnel.sh"
+    "tunnel": "bash scripts/tunnel.sh",
+    "demo": "node scripts/demo.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.0",
