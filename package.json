@@ -1,0 +1,27 @@
+{
+  "name": "mesa-muse",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A shop on WhatsApp from one voice note and one photo. Built on Meta's Muse Spark, Muse Voice Transcribe and SAM 3.1, delivered over the WhatsApp Business Cloud API.",
+  "engines": { "node": ">=22.18" },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/server.ts",
+    "dev": "node --watch --env-file-if-exists=.env src/server.ts",
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.0",
+    "@meta-sam/parser": "^0.1.0",
+    "hono": "^4.9.0",
+    "openai": "^4.104.0",
+    "qrcode": "^1.5.4",
+    "sharp": "^0.34.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "@types/qrcode": "^1.5.5",
+    "typescript": "^5.9.2"
+  }
+}
