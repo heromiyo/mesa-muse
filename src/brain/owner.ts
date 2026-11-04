@@ -3,7 +3,7 @@ import path from 'node:path';
 import QRCode from 'qrcode';
 import { config, mediaDir } from '../config.ts';
 import { db, kwacha, productsOf, updateShop, type Order, type Shop } from '../db.ts';
-import { museJson } from '../meta/muse.ts';
+import { models } from '../meta/models.ts';
 import { productCard } from '../meta/sam.ts';
 import { sendButtons, sendImage, sendText, uploadMedia } from '../whatsapp/cloud.ts';
 import type { Inbound } from '../whatsapp/inbound.ts';
@@ -34,7 +34,7 @@ export async function welcomeOwner(to: string) {
 async function readProfile(m: Inbound, shop: Shop) {
   const said = await words(m, shop);
   if (!said.trim()) return sendText(m.from, "I couldn't hear that one. Could you send the voice note again?");
-  const p = await museJson<Profile>({
+  const p = await models.museJson<Profile>({
     task: 'owner voice → shop profile', phone: m.from,
     system: 'A trader in Zambia is describing their shop so we can open it on WhatsApp. Extract the shop profile. ' +
       'Keep their own words for the shop name. Leave a field empty if they did not say it. ' +
@@ -122,7 +122,7 @@ export async function onOrderDecision(to: string, shop: Shop, orderId: number, a
   const order = db.prepare('SELECT * FROM orders WHERE id = ? AND shop_id = ?').get(orderId, shop.id) as Order | undefined;
   if (!order || order.status !== 'new') return sendText(to, 'That order was already handled.');
   db.prepare('UPDATE orders SET status = ? WHERE id = ?').run(accept ? 'accepted' : 'declined', orderId);
-  const note = await museJson<{ message: string }>({
+  const note = await models.museJson<{ message: string }>({
     task: 'order decision → customer message', phone: order.customer_phone,
     system: `Write one short WhatsApp message from ${shop.name} to a customer. Use the language the customer has been using in the order notes. Be warm, specific, no emojis spam.`,
     user: `Order #${order.id}: ${order.items}. Total ${kwacha(order.total_ngwee)}. Fulfilment: ${order.fulfilment}. The shop ${accept ? 'ACCEPTED it. Tell them how payment works: ' + shop.payments : 'cannot do it right now. Apologise and invite them to try again later.'}`,

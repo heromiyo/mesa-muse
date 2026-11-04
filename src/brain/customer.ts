@@ -3,7 +3,8 @@ import path from 'node:path';
 import type OpenAI from 'openai';
 import { mediaDir } from '../config.ts';
 import { db, kwacha, person, productsOf, updatePerson, type Order, type Product, type Shop } from '../db.ts';
-import { imagePart, museTurn } from '../meta/muse.ts';
+import { imagePart } from '../meta/muse.ts';
+import { models } from '../meta/models.ts';
 import { productCard } from '../meta/sam.ts';
 import { sendButtons, sendText, uploadMedia } from '../whatsapp/cloud.ts';
 import type { Inbound } from '../whatsapp/inbound.ts';
@@ -107,7 +108,7 @@ export async function customerTurn(m: Inbound, shop: Shop) {
 
   const turn: Msg[] = [{ role: 'user', content }];
   for (let step = 0; step < 4; step++) {
-    const reply = await museTurn({
+    const reply = await models.museTurn({
       task: 'customer chat', phone: m.from, tools,
       messages: [{ role: 'system', content: system(shop, products, cart) }, ...history, ...turn],
     });

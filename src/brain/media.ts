@@ -3,7 +3,8 @@ import path from 'node:path';
 import sharp from 'sharp';
 import { config, mediaDir } from '../config.ts';
 import { downloadMedia } from '../whatsapp/cloud.ts';
-import { toWav, transcribe } from '../meta/voice.ts';
+import { toWav } from '../meta/voice.ts';
+import { models } from '../meta/models.ts';
 import type { Inbound } from '../whatsapp/inbound.ts';
 
 export const publicMedia = (file: string) => `${config.publicUrl}/media/${path.basename(file)}`;
@@ -17,7 +18,7 @@ export async function saveMedia(name: string, bytes: Buffer): Promise<string> {
 /** Voice note → text with Muse Voice Transcribe. */
 export async function heard(m: Inbound, keywords: string[] = []): Promise<string> {
   const { file } = await downloadMedia(m.mediaId!, 'ogg');
-  return transcribe(await toWav(file), { phone: m.from, keywords });
+  return models.transcribe(await toWav(file), { phone: m.from, keywords });
 }
 
 /** Photo → bytes plus a data URL Muse Spark can look at (downscaled to keep calls quick). */

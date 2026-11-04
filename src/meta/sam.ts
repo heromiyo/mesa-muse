@@ -30,7 +30,9 @@ async function* normalized(stream: AsyncIterable<unknown>): AsyncIterable<Respon
  * transparent PNG cut along its pixel mask, ready to show a customer on WhatsApp.
  */
 export async function cutOut(image: Buffer, concept: string, phone?: string): Promise<Cutout[]> {
-  const jpeg = await sharp(image).rotate().jpeg({ quality: 90 }).toBuffer();
+  // Boxes come back in the pixel space of the image we send, so send exactly what we crop from.
+  const jpeg = await sharp(image).rotate().resize(1600, 1600, { fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 90 }).toBuffer();
+  const { width: W = 0, height: H = 0 } = await sharp(jpeg).metadata();
   const result = await timed({ phone, model: config.meta.sam, task: `segment “${concept}”` }, async () => {
     const stream = await meta().responses.create({
       model: config.meta.sam,
@@ -46,13 +48,14 @@ export async function cutOut(image: Buffer, concept: string, phone?: string): Pr
   if (result.outcome.status !== 'completed') return [];
   const cutouts: Cutout[] = [];
   for (const rec of recordsOfKind(result.records, 'mask')) {
-    const { left, top, right, bottom } = rec.bounds;
+    const { left, top } = rec.bounds;
+    const right = Math.min(rec.bounds.right, W), bottom = Math.min(rec.bounds.bottom, H);
     const { width, height } = rec.mask;
-    if (width < 24 || height < 24) continue; // specks are not products
+    if (right - left < 24 || bottom - top < 24 || width < 8 || height < 8) continue; // specks are not products
     const bits = decodeMaskToRaster(rec.mask);
     const alpha = Buffer.alloc(width * height);
     for (let i = 0; i < bits.length; i++) alpha[i] = bits[i] ? 255 : 0;
-    const rgb = await sharp(jpeg).extract({ left, top, width: right - left, height: bottom - top }).resize(width, height).removeAlpha().raw().toBuffer();
+    const rgb = await sharp(jpeg).extract({ left, top, width: right - left, height: bottom - top }).resize(width, height, { fit: 'fill' }).removeAlpha().raw().toBuffer();
     const png = await sharp(rgb, { raw: { width, height, channels: 3 } })
       .joinChannel(alpha, { raw: { width, height, channels: 1 } })
       .png().toBuffer();

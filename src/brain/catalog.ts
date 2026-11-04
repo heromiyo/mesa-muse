@@ -1,5 +1,6 @@
-import { museJson, imagePart } from '../meta/muse.ts';
-import { cutOut, type Cutout } from '../meta/sam.ts';
+import { imagePart } from '../meta/muse.ts';
+import { models } from '../meta/models.ts';
+import type { Cutout } from '../meta/sam.ts';
 import type { Shop } from '../db.ts';
 import path from 'node:path';
 import { pngDataUrl, saveMedia } from './media.ts';
@@ -16,7 +17,7 @@ const MAX_ITEMS = 9;
  *   3. Muse Spark sees the numbered cut-outs and writes a name, a one-line pitch and a market price in kwacha.
  */
 export async function photoToProducts(photo: { bytes: Buffer; dataUrl: string }, shop: Shop, phone: string): Promise<DraftItem[]> {
-  const plan = await museJson<{ products: { phrase: string; count: number }[] }>({
+  const plan = await models.museJson<{ products: { phrase: string; count: number }[] }>({
     task: 'photo → product list', phone,
     system: 'You help a market trader in Zambia put their stock online. List the distinct kinds of product for sale in the photo. ' +
       'For each, give a short visual noun phrase a segmentation model can find (e.g. "red cooking oil bottle", "packet of sugar", "denim jacket"), and how many you see. ' +
@@ -30,14 +31,14 @@ export async function photoToProducts(photo: { bytes: Buffer; dataUrl: string },
   });
 
   const phrases = plan.products.slice(0, 6).map((p) => p.phrase);
-  const found = await Promise.all(phrases.map((p) => cutOut(photo.bytes, p, phone).catch(() => [] as Cutout[])));
+  const found = await Promise.all(phrases.map((p) => models.cutOut(photo.bytes, p, phone).catch(() => [] as Cutout[])));
   // One representative per product kind (the largest, clearest cut-out), then fill with extra kinds' runners-up.
   const area = (c: Cutout) => (c.box.right - c.box.left) * (c.box.bottom - c.box.top);
   const best = found.map((list) => [...list].sort((a, b) => area(b) - area(a))[0]).filter((c): c is Cutout => !!c);
   const picks = best.slice(0, MAX_ITEMS);
   if (!picks.length) return [];
 
-  const priced = await museJson<{ items: { number: number; name: string; description: string; price_kwacha: number }[] }>({
+  const priced = await models.museJson<{ items: { number: number; name: string; description: string; price_kwacha: number }[] }>({
     task: 'cut-outs → names + prices', phone,
     system: 'You write a WhatsApp shop catalog for a trader in Zambia. For each numbered product photo, give a short customer-facing name (brand and size if visible), ' +
       'a one-line description a customer would care about, and a fair current retail price in Zambian kwacha for a small shop or market stall. ' +
@@ -68,7 +69,7 @@ export type EditOp = { op: 'set_price' | 'rename' | 'remove' | 'describe'; numbe
 
 /** Owner says "number 2 is K30, take out the soap" (typed or spoken) → edit operations on the draft. */
 export async function editsFromWords(words: string, items: { name: string; price_ngwee: number }[], shop: Shop, phone: string) {
-  return museJson<{ ops: EditOp[]; reply: string }>({
+  return models.museJson<{ ops: EditOp[]; reply: string }>({
     task: 'owner words → catalog edits', phone,
     system: 'A shop owner is correcting their WhatsApp catalog by message or voice note. Turn what they said into edit operations on the numbered list. ' +
       'set_price value is kwacha as a number string, e.g. "30". rename/describe value is the new text. remove value is "". ' +
