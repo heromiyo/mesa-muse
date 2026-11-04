@@ -48,6 +48,7 @@ export async function handle(m: Inbound) {
 
   if (m.replyId === 'role:sell' || (owned && m.kind === 'text' && m.text.trim().toLowerCase() === 'my shop')) {
     const shop = owned ?? createShop(m.from);
+    if (shop.answering) updateShop(shop.id, { answering: null });
     updatePerson(m.from, { role: 'owner', shop_id: shop.id });
     if (shop.stage === 'live') return sendText(m.from, `You're managing *${shop.name}*. Send a photo to add stock, or tell me what changed.`);
     return welcomeOwner(m.from);
@@ -63,6 +64,11 @@ export async function handle(m: Inbound) {
   }
 
   if (me.role === 'owner' && owned) return ownerTurn(m, owned);
+  // Tapping "Answer them" from anywhere puts the owner back in their own shop to answer.
+  if (owned && m.replyId?.startsWith('answer:') && me.shop_id !== owned.id) {
+    updatePerson(m.from, { role: 'owner', shop_id: owned.id });
+    me.shop_id = owned.id;
+  }
   // Order and answer buttons (and the answer that follows) reach the owner even while they browse their own shop as a customer.
   if (owned && (m.replyId?.startsWith('order:') || m.replyId?.startsWith('answer:') || (owned.answering && me.shop_id === owned.id && (m.kind === 'text' || m.kind === 'voice'))))
     return ownerTurn(m, owned);
