@@ -251,6 +251,23 @@ test('WhatsApp retries of the same message are handled once', async () => {
   assert.equal(sent.length - before, 1);
 });
 
+test("a question the assistant can't answer reaches the owner, and the owner's answer reaches the customer", async () => {
+  turns.push({ tool_calls: [{ id: 'call_2', type: 'function', function: { name: 'ask_owner', arguments: JSON.stringify({ question: 'Do you sell 20L oil in bulk?' }) } }] });
+  turns.push({ content: "I've asked Bupe — she'll reply here." });
+  await text(BUYER, 'Do you have 20 litre oil for my restaurant?');
+  const asked = await out(2);
+  const toOwner = asked.find((s) => s.to === OWNER)!;
+  assert.match(textOf(toOwner), /Do you sell 20L oil in bulk\?/);
+  assert.deepEqual(buttonIds(toOwner), [`answer:${BUYER}`]);
+
+  await tap(OWNER, `answer:${BUYER}`, '↩️ Answer them');
+  await out(1);
+  await text(OWNER, 'Yes, K1,050 per 20L. Come tomorrow.');
+  const relayed = await out(2);
+  assert.match(textOf(relayed.find((s) => s.to === BUYER)!), /\*Bana Bupe Groceries\*: Yes, K1,050 per 20L/);
+  assert.match(textOf(relayed.find((s) => s.to === OWNER)!), /Sent/);
+});
+
 test('every model call is traced for the control room', async () => {
   const state = await (await fetch(`http://localhost:${APP}/api/state`)).json();
   const tasks = state.traces.map((t: any) => t.task);

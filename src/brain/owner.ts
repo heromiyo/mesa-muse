@@ -97,6 +97,15 @@ async function publish(to: string, shop: Shop) {
   await sendText(to, `Forward this to your customers 👇\n\n🛍️ *${shop.name}* is now on WhatsApp! See what's in stock and order in your own language — text, voice note or a photo of what you want.\n${link}`);
 }
 
+/** The owner's answer to a customer's question goes straight to that customer. */
+async function relayAnswer(m: Inbound, shop: Shop) {
+  const to = shop.answering!;
+  updateShop(shop.id, { answering: null });
+  const said = await words(m, shop);
+  await sendText(to, `💬 *${shop.name}*: ${said}`);
+  await sendText(m.from, '✅ Sent.');
+}
+
 /** After launch: the owner can keep talking to their shop. */
 async function liveOwner(m: Inbound, shop: Shop) {
   if (m.kind === 'image') {
@@ -142,6 +151,11 @@ export async function ownerTurn(m: Inbound, shop: Shop) {
   }
   if (id === 'catalog:publish') return publish(m.from, shop);
   if (id === 'catalog:more') return sendText(m.from, '📸 Send the next photo.');
+  if (id.startsWith('answer:')) {
+    updateShop(shop.id, { answering: id.slice(7) });
+    return sendText(m.from, '🎙️ Send your answer — voice note or text — and I will pass it on.');
+  }
+  if (shop.answering && (m.kind === 'text' || m.kind === 'voice')) return relayAnswer(m, shop);
   if (id.startsWith('order:')) {
     const [, oid, verdict] = id.split(':');
     return onOrderDecision(m.from, shop, Number(oid), verdict === 'accept');

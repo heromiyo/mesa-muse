@@ -134,8 +134,8 @@ export async function customerTurn(m: Inbound, shop: Shop) {
           result = `Order #${order.id} sent to the owner, total ${kwacha(order.total_ngwee)}. Tell the customer the owner will confirm shortly.`;
         } else result = 'Cart is empty — nothing to order.';
       } else if (call.function.name === 'ask_owner') {
-        await sendText(shop.owner_phone, `❓ A customer (+${m.from}) asks: ${args.question}`);
-        result = 'Forwarded to the owner; they may message the customer directly.';
+        await sendButtons(shop.owner_phone, `❓ ${m.name || 'A customer'} (+${m.from}) asks: ${args.question}`, [{ id: `answer:${m.from}`, title: '↩️ Answer them' }]);
+        result = 'Forwarded to the owner. Tell the customer the owner will reply here.';
       }
       turn.push({ role: 'tool', tool_call_id: call.id, content: result });
     }

@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS shops (
   language TEXT NOT NULL DEFAULT 'English',
   stage TEXT NOT NULL DEFAULT 'profile',
   draft TEXT,
+  answering TEXT,
   created_at INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS products (
@@ -75,7 +76,7 @@ CREATE TABLE IF NOT EXISTS traces (
 
 export type Shop = {
   id: number; code: string; owner_phone: string; name: string; about: string; location: string;
-  hours: string; payments: string; delivery: string; language: string; stage: string; draft: string | null;
+  hours: string; payments: string; delivery: string; language: string; stage: string; draft: string | null; answering: string | null;
 };
 export type Product = { id: number; shop_id: number; name: string; description: string; price_ngwee: number; image: string | null; available: number };
 export type Person = { phone: string; name: string; role: string; shop_id: number | null; history: string; cart: string };
