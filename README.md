@@ -33,16 +33,17 @@ WhatsApp ──webhook──▶ src/server.ts ──▶ src/brain/router.ts
 
 ## Run it
 
-Needs Node 24 and ffmpeg.
+Needs Node 24 and ffmpeg (or use the Dockerfile).
 
 ```bash
-cp .env.example .env   # fill MODEL_API_KEY and the WhatsApp Cloud API values
+cp .env.example .env   # MODEL_API_KEY + WhatsApp Cloud API values
 npm install
+npm run doctor         # live check: Muse Spark, Muse Voice Transcribe, SAM 3.1, WhatsApp number
 npm start              # control room on http://localhost:8787
-npm test
+npm run tunnel         # public https URL → put it in .env as PUBLIC_URL, restart
+npm run webhook        # registers PUBLIC_URL/webhook with Meta and subscribes the WABA
+npm test               # 13 tests, including a full owner + customer journey against fake Graph/Meta APIs
 ```
-
-Point the WhatsApp webhook (App → WhatsApp → Configuration) at `https://<your-host>/webhook` with the verify token from `.env`, and subscribe to `messages`.
 
 ## What was built during the hackathon
 
