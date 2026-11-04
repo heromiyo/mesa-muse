@@ -57,6 +57,6 @@ app.get('/api/events', (c) => streamSSE(c, async (stream) => {
 app.get('/health', (c) => c.json({ ok: true, meta: !!config.meta.apiKey, whatsapp: !!config.wa.token && !!config.wa.phoneNumberId }));
 
 app.use('/media/*', serveStatic({ root: path.relative(process.cwd(), config.dataDir) }));
-app.use('/*', serveStatic({ root: 'public' }));
+app.use('/*', serveStatic({ root: path.relative(process.cwd(), path.join(import.meta.dirname, '..', 'public')) || '.' }));
 
 serve({ fetch: app.fetch, port: config.port }, () => console.log(`Mesa Muse on :${config.port} — control room ${config.publicUrl}`));
