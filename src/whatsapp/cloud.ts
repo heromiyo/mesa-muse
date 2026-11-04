@@ -97,6 +97,7 @@ export async function markReadTyping(messageId: string) {
 
 /** Fetch an inbound photo or voice note and keep a copy for the control room. */
 export async function downloadMedia(mediaId: string, ext: string): Promise<{ file: string; bytes: Buffer }> {
+  if (!/^\d{1,40}$/.test(mediaId)) throw new Error('unexpected media id');
   const info = await graph<{ url: string }>(mediaId);
   const res = await fetch(info.url, { headers: { Authorization: `Bearer ${wa.token}` } });
   if (!res.ok) throw new Error(`media download ${res.status}`);
@@ -108,7 +109,8 @@ export async function downloadMedia(mediaId: string, ext: string): Promise<{ fil
 
 /** Meta signs every webhook POST with the app secret (X-Hub-Signature-256). */
 export function validSignature(raw: string, header: string | undefined): boolean {
-  if (!wa.appSecret) return true;
+  // Without an app secret anyone who knows the URL could post messages "from" any number.
+  if (!wa.appSecret) return process.env.ALLOW_UNSIGNED_WEBHOOKS === '1';
   if (!header?.startsWith('sha256=')) return false;
   const want = Buffer.from(createHmac('sha256', wa.appSecret).update(raw).digest('hex'));
   const got = Buffer.from(header.slice(7));

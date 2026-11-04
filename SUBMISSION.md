@@ -53,7 +53,7 @@ Everything in the repository. It was written from scratch on Nov 4, 2026, and `g
 
 - Node 24 (native TypeScript), Hono, `node:sqlite`, `sharp` for masks and cut-outs, ffmpeg for audio.
 - Per-sender message queues: one customer's turn never blocks another's. WhatsApp webhook retries are de-duplicated by message id.
-- 13 automated tests, including a full owner-and-customer journey through the real webhook against fake Graph and Meta API servers.
+- 17 automated tests, including a full owner-and-customer journey through the real webhook against fake Graph and Meta API servers.
 - `npm run doctor` smoke-tests each Meta model and the WhatsApp number with live keys.
 
 ## Challenges

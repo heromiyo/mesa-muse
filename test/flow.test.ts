@@ -20,7 +20,7 @@ Object.assign(process.env, {
   DB_PATH: ':memory:', DATA_DIR: dir, PORT: String(APP), PUBLIC_URL: `http://localhost:${APP}`,
   MODEL_API_KEY: 'LLM|1|test', MODEL_API_BASE: `http://localhost:${FAKE}/v1`,
   WA_TOKEN: 'EAAtest', WA_PHONE_NUMBER_ID: '555', WA_VERIFY_TOKEN: 'verify-me', WA_APP_SECRET: 'app-secret',
-  WA_DISPLAY_NUMBER: '15550001111', WA_GRAPH: `http://localhost:${FAKE}/graph`,
+  WA_DISPLAY_NUMBER: '15550001111', CONTROL_PASSWORD: 'pw', WA_GRAPH: `http://localhost:${FAKE}/graph`,
 });
 
 const OWNER = '260970000001', BUYER = '260970000002';
@@ -31,6 +31,7 @@ const sent: Sent[] = [];
 const media = new Map<string, Buffer>();
 const modelCalls: { kind: string; body: any }[] = [];
 const turns: any[] = []; // scripted Muse Spark tool-loop replies
+let removeAll = false;
 let mediaSeq = 0;
 
 const json = (schema: string, body: any) => {
@@ -42,7 +43,9 @@ const json = (schema: string, body: any) => {
       const names = ['Mazoe Orange 2L', 'Cooking oil 2.5L', 'Boom bar'];
       return { items: Array.from({ length: n }, (_, i) => ({ number: i + 1, name: names[i] ?? `Item ${i + 1}`, description: 'Fresh stock', price_kwacha: [45, 95, 12][i] ?? 10 })) };
     }
-    case 'edits': return { ops: [{ op: 'set_price', number: 2, value: '90' }], reply: 'Done — cooking oil is now K90.' };
+    case 'edits': return removeAll
+      ? { ops: [1, 2, 3].map((number) => ({ op: 'remove', number, value: '' })), reply: 'Removed.' }
+      : { ops: [{ op: 'set_price', number: 2, value: '90' }], reply: 'Done — cooking oil is now K90.' };
     case 'note': return { message: 'Ee! Your order is accepted. Pay cash or MTN on pickup.' };
     default: throw new Error(`no fake for schema ${schema}`);
   }
@@ -100,8 +103,8 @@ before(async () => {
   // Real media for the downloads: an Opus voice note and a shelf photo.
   const ogg = path.join(dir, 'in.ogg');
   execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-c:a', 'libopus', ogg]);
-  media.set('voice-1', readFileSync(ogg));
-  media.set('photo-1', await sharp({ create: { width: 900, height: 600, channels: 3, background: '#d8c8a8' } }).jpeg().toBuffer());
+  media.set('1001', readFileSync(ogg));
+  media.set('1002', await sharp({ create: { width: 900, height: 600, channels: 3, background: '#d8c8a8' } }).jpeg().toBuffer());
 
   // Scripted SAM: three cut-outs from the photo.
   const { models } = await import('../src/meta/models.ts');
@@ -115,6 +118,7 @@ before(async () => {
 after(() => { fake.close(); setTimeout(() => process.exit(0), 50); });
 
 // ---------- helpers ----------
+const AUTH = { authorization: 'Basic ' + Buffer.from('mesa:pw').toString('base64') };
 let msgSeq = 0;
 async function hook(from: string, message: Record<string, unknown>, id = `in.${++msgSeq}`) {
   const body = JSON.stringify({ object: 'whatsapp_business_account', entry: [{ changes: [{ field: 'messages', value: {
@@ -150,6 +154,14 @@ test('webhook verification handshake', async () => {
   assert.equal(bad.status, 403);
 });
 
+test('control room needs the password; webhook and health stay public', async () => {
+  assert.equal((await fetch(`http://localhost:${APP}/api/state`)).status, 401);
+  assert.equal((await fetch(`http://localhost:${APP}/`)).status, 401);
+  assert.equal((await fetch(`http://localhost:${APP}/media/x.png`)).status, 401);
+  assert.equal((await fetch(`http://localhost:${APP}/api/state`, { headers: AUTH })).status, 200);
+  assert.equal((await fetch(`http://localhost:${APP}/health`)).status, 200);
+});
+
 test('unsigned webhooks are rejected', async () => {
   const res = await fetch(`http://localhost:${APP}/webhook`, { method: 'POST', body: '{}', headers: { 'x-hub-signature-256': 'sha256=00' } });
   assert.equal(res.status, 401);
@@ -165,7 +177,7 @@ test('owner opens a shop from a voice note and a photo', async () => {
   [m] = await out(1);
   assert.match(textOf(m!), /voice note/);
 
-  await hook(OWNER, { type: 'audio', audio: { id: 'voice-1', mime_type: 'audio/ogg; codecs=opus', voice: true } });
+  await hook(OWNER, { type: 'audio', audio: { id: '1001', mime_type: 'audio/ogg; codecs=opus', voice: true } });
   [m] = await out(1);
   assert.match(textOf(m!), /Bana Bupe Groceries/);
   assert.deepEqual(buttonIds(m!), ['profile:ok', 'profile:redo']);
@@ -176,7 +188,7 @@ test('owner opens a shop from a voice note and a photo', async () => {
   [m] = await out(1);
   assert.match(textOf(m!), /photo/);
 
-  await hook(OWNER, { type: 'image', image: { id: 'photo-1', mime_type: 'image/jpeg' } });
+  await hook(OWNER, { type: 'image', image: { id: '1002', mime_type: 'image/jpeg' } });
   const batch = await out(3, 15000); // "got it", contact sheet, review buttons
   assert.match(textOf(batch[0]!), /cutting it out/);
   assert.equal(batch[1]!.type, 'image');
@@ -198,7 +210,7 @@ test('owner opens a shop from a voice note and a photo', async () => {
   code = decodeURIComponent(link).match(/#([A-Z2-9]{4})/)![1]!;
   assert.match(textOf(live[1]!), /Forward this/);
 
-  const state = await (await fetch(`http://localhost:${APP}/api/state`)).json();
+  const state = await (await fetch(`http://localhost:${APP}/api/state`, { headers: AUTH })).json();
   assert.equal(state.shops[0].stage, 'live');
   assert.deepEqual(state.shops[0].products.map((p: any) => p.price_ngwee), [4500, 9000, 1200]);
 });
@@ -268,8 +280,49 @@ test("a question the assistant can't answer reaches the owner, and the owner's a
   assert.match(textOf(relayed.find((s) => s.to === OWNER)!), /Sent/);
 });
 
+test('adding stock keeps a live shop open; removing every new item is safe', async () => {
+  await hook(OWNER, { type: 'image', image: { id: '1002', mime_type: 'image/jpeg' } });
+  await out(3, 15000);
+  let state = await (await fetch(`http://localhost:${APP}/api/state`, { headers: AUTH })).json();
+  assert.equal(state.shops[0].stage, 'live', 'shop stays open while new stock is reviewed');
+  assert.equal(state.shops[0].draft.length, 3);
+
+  // A new customer can still arrive by the link meanwhile.
+  await text('260970000003', `Hi! #${code}`);
+  const greet = await out(4);
+  assert.match(textOf(greet[0]!), /Welcome to/);
+
+  removeAll = true;
+  await text(OWNER, 'remove all of the new ones');
+  const [m] = await out(1);
+  assert.match(textOf(m!), /Nothing left in the draft/);
+  state = await (await fetch(`http://localhost:${APP}/api/state`, { headers: AUTH })).json();
+  assert.equal(state.shops[0].stage, 'live');
+  assert.deepEqual(state.shops[0].draft, []);
+  assert.equal(state.shops[0].products.length, 3, 'published products untouched');
+
+  await tap(OWNER, 'catalog:publish');
+  const [refused] = await out(1);
+  assert.match(textOf(refused!), /catalog is empty/);
+});
+
+test('owner browsing their own shop as a customer can still answer questions', async () => {
+  await text(OWNER, `Hi! #${code}`);
+  await out(4);
+  turns.push({ tool_calls: [{ id: 'call_3', type: 'function', function: { name: 'ask_owner', arguments: JSON.stringify({ question: 'Open on Sunday?' }) } }] });
+  turns.push({ content: "I've asked the owner." });
+  await text(BUYER, 'Are you open Sunday?');
+  await out(2);
+  await tap(OWNER, `answer:${BUYER}`, '↩️ Answer them');
+  const [prompt] = await out(1);
+  assert.match(textOf(prompt!), /Send your answer/);
+  await text(OWNER, 'Yes, 8 to 13.');
+  const relayed = await out(2);
+  assert.match(textOf(relayed.find((s) => s.to === BUYER)!), /Yes, 8 to 13/);
+});
+
 test('every model call is traced for the control room', async () => {
-  const state = await (await fetch(`http://localhost:${APP}/api/state`)).json();
+  const state = await (await fetch(`http://localhost:${APP}/api/state`, { headers: AUTH })).json();
   const tasks = state.traces.map((t: any) => t.task);
   for (const want of ['voice note → text', 'owner voice → shop profile', 'photo → product list', 'cut-outs → names + prices', 'owner words → catalog edits', 'customer chat', 'order decision → customer message'])
     assert.ok(tasks.includes(want), `missing trace ${want}`);

@@ -60,8 +60,9 @@ export async function handle(m: Inbound) {
   }
 
   if (me.role === 'owner' && owned) return ownerTurn(m, owned);
-  // Order buttons reach the owner even while they browse their own shop as a customer.
-  if (owned && m.replyId?.startsWith('order:')) return ownerTurn(m, owned);
+  // Order and answer buttons (and the answer that follows) reach the owner even while they browse their own shop as a customer.
+  if (owned && (m.replyId?.startsWith('order:') || m.replyId?.startsWith('answer:') || (owned.answering && (m.kind === 'text' || m.kind === 'voice'))))
+    return ownerTurn(m, owned);
   if (me.role === 'customer' && me.shop_id) {
     const shop = shopById(me.shop_id);
     if (shop) return customerTurn(m, shop);

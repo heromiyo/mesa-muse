@@ -1,6 +1,7 @@
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
+import { basicAuth } from 'hono/basic-auth';
 import { streamSSE } from 'hono/streaming';
 import path from 'node:path';
 import { config } from './config.ts';
@@ -12,6 +13,20 @@ import { parseWebhook } from './whatsapp/inbound.ts';
 import { validSignature } from './whatsapp/cloud.ts';
 
 const app = new Hono();
+
+// The control room shows customers' numbers, chats and voice notes, so it is private.
+// Only the WhatsApp webhook and the health check are public.
+const password = process.env.CONTROL_PASSWORD ?? '';
+const isPublic = !/^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(config.publicUrl);
+if (isPublic && !password) {
+  console.error('CONTROL_PASSWORD must be set when PUBLIC_URL is a public address.');
+  process.exit(1);
+}
+const guard = password ? basicAuth({ username: process.env.CONTROL_USER ?? 'mesa', password }) : undefined;
+app.use('*', async (c, next) => {
+  if (!guard || c.req.path === '/webhook' || c.req.path === '/health') return next();
+  return guard(c, next);
+});
 
 // Meta's one-time webhook verification handshake.
 app.get('/webhook', (c) => {

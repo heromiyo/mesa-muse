@@ -61,6 +61,17 @@ test('webhook signature must match the app secret', () => {
   assert.equal(validSignature(body, undefined), false);
 });
 
+test('without an app secret, webhooks are refused unless explicitly allowed for local testing', async () => {
+  const { config } = await import('../src/config.ts');
+  config.wa.appSecret = '';
+  try {
+    delete process.env.ALLOW_UNSIGNED_WEBHOOKS;
+    assert.equal(validSignature('{}', undefined), false);
+    process.env.ALLOW_UNSIGNED_WEBHOOKS = '1';
+    assert.equal(validSignature('{}', undefined), true);
+  } finally { config.wa.appSecret = 'shh'; delete process.env.ALLOW_UNSIGNED_WEBHOOKS; }
+});
+
 test('shop codes are found in a wa.me first message and resolve case-insensitively', () => {
   const shop = createShop('260970000002');
   assert.equal(shopCodeIn(`Hi Bupe's shop! #${shop.code}`), shop.code);

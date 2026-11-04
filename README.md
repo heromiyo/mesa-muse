@@ -42,7 +42,7 @@ npm run doctor         # live check: Muse Spark, Muse Voice Transcribe, SAM 3.1,
 npm start              # control room on http://localhost:8787
 npm run tunnel         # public https URL → put it in .env as PUBLIC_URL, restart
 npm run webhook        # registers PUBLIC_URL/webhook with Meta and subscribes the WABA
-npm test               # 13 tests, including a full owner + customer journey against fake Graph/Meta APIs
+npm test               # 17 tests, including a full owner + customer journey against fake Graph/Meta APIs
 ```
 
 ## What was built during the hackathon

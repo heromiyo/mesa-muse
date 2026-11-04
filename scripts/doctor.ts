@@ -61,6 +61,6 @@ await check('WhatsApp Cloud API number', async () => {
   return `${body.display_phone_number} "${body.verified_name}" quality ${body.quality_rating}${hint}`;
 });
 
-if (!config.wa.appSecret) console.log('! WA_APP_SECRET is empty: webhook signatures are not checked.');
+if (!config.wa.appSecret) console.log('! WA_APP_SECRET is empty: every webhook POST will be rejected (set ALLOW_UNSIGNED_WEBHOOKS=1 only for local testing).');
 if (!config.wa.verifyToken) console.log('! WA_VERIFY_TOKEN is empty: Meta cannot verify the webhook.');
 process.exit(failed ? 1 : 0);

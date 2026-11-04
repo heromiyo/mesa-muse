@@ -68,7 +68,8 @@ async function readStock(m: Inbound, shop: Shop) {
   const fresh = await photoToProducts(pic, shop, m.from);
   if (!fresh.length) return sendText(m.from, "I couldn't pick out products in that photo. Try one with the items spread out and good light.");
   const items = [...draftOf(shop), ...fresh].slice(0, 20);
-  updateShop(shop.id, { draft: JSON.stringify(items), stage: 'review' });
+  // A live shop stays open while the owner reviews new stock; only a new shop moves to review.
+  updateShop(shop.id, { draft: JSON.stringify(items), stage: shop.stage === 'live' ? 'live' : 'review' });
   await showDraft(m.from, { ...shop, draft: JSON.stringify(items) });
 }
 
@@ -85,6 +86,7 @@ async function showDraft(to: string, shop: Shop) {
 
 async function publish(to: string, shop: Shop) {
   const items = draftOf(shop);
+  if (!items.length) return sendText(to, '📸 Your catalog is empty — send a photo of your products first.');
   const now = Date.now();
   const insert = db.prepare('INSERT INTO products (shop_id, name, description, price_ngwee, image, created_at) VALUES (?, ?, ?, ?, ?, ?)');
   for (const it of items) insert.run(shop.id, it.name, it.description, it.price_ngwee, it.image, now);
@@ -95,6 +97,21 @@ async function publish(to: string, shop: Shop) {
   await sendImage(to, await uploadMedia(qr, 'image/png', 'shop-qr.png'),
     `🎉 *${shop.name} is open!*\n\nPrint this QR for your stall, or share your link:\n${link}\n\nI'll answer customers for you and send every order here.`, publicMedia(file));
   await sendText(to, `Forward this to your customers 👇\n\n🛍️ *${shop.name}* is now on WhatsApp! See what's in stock and order in your own language — text, voice note or a photo of what you want.\n${link}`);
+}
+
+/** Spoken or typed corrections to the draft catalog. */
+async function editDraft(m: Inbound, shop: Shop) {
+  const said = await words(m, shop);
+  const items = draftOf(shop);
+  const { ops, reply } = await editsFromWords(said, items, shop, m.from);
+  const next = applyEdits(items, ops);
+  if (!next.length) {
+    updateShop(shop.id, { draft: null, stage: shop.stage === 'live' ? 'live' : 'stock' });
+    return sendText(m.from, `${reply}\n\n📸 Nothing left in the draft — send a new photo when you're ready.`);
+  }
+  updateShop(shop.id, { draft: JSON.stringify(next) });
+  await sendText(m.from, reply);
+  if (ops.length) return showDraft(m.from, { ...shop, draft: JSON.stringify(next) });
 }
 
 /** The owner's answer to a customer's question goes straight to that customer. */
@@ -108,10 +125,8 @@ async function relayAnswer(m: Inbound, shop: Shop) {
 
 /** After launch: the owner can keep talking to their shop. */
 async function liveOwner(m: Inbound, shop: Shop) {
-  if (m.kind === 'image') {
-    updateShop(shop.id, { stage: 'stock' });
-    return readStock(m, { ...shop, stage: 'stock' });
-  }
+  if (m.kind === 'image') return readStock(m, shop);
+  if (draftOf(shop).length && (m.kind === 'voice' || m.kind === 'text')) return editDraft(m, shop);
   const said = await words(m, shop);
   const products = productsOf(shop.id);
   const today = db.prepare('SELECT * FROM orders WHERE shop_id = ? AND created_at > ? ORDER BY id').all(shop.id, Date.now() - 86_400_000) as Order[];
@@ -171,15 +186,7 @@ export async function ownerTurn(m: Inbound, shop: Shop) {
       return sendText(m.from, '📸 Send a photo of your products and I will build your catalog.');
     case 'review':
       if (m.kind === 'image') return readStock(m, shop);
-      if (m.kind === 'voice' || m.kind === 'text') {
-        const said = await words(m, shop);
-        const items = draftOf(shop);
-        const { ops, reply } = await editsFromWords(said, items, shop, m.from);
-        const next = applyEdits(items, ops);
-        updateShop(shop.id, { draft: JSON.stringify(next) });
-        await sendText(m.from, reply);
-        if (ops.length) return showDraft(m.from, { ...shop, draft: JSON.stringify(next) });
-      }
+      if (m.kind === 'voice' || m.kind === 'text') return editDraft(m, shop);
       return;
     default:
       return liveOwner(m, shop);
