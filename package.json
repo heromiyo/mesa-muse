@@ -4,12 +4,17 @@
   "private": true,
   "type": "module",
   "description": "A shop on WhatsApp from one voice note and one photo. Built on Meta's Muse Spark, Muse Voice Transcribe and SAM 3.1, delivered over the WhatsApp Business Cloud API.",
-  "engines": { "node": ">=22.18" },
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
     "start": "node --env-file-if-exists=.env src/server.ts",
     "dev": "node --watch --env-file-if-exists=.env src/server.ts",
     "test": "node --test test/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "doctor": "node --env-file-if-exists=.env scripts/doctor.ts",
+    "webhook": "node --env-file-if-exists=.env scripts/webhook.ts",
+    "tunnel": "bash scripts/tunnel.sh"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.0",
