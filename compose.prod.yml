@@ -1,0 +1,17 @@
+# Production on the AWS Lightsail apps host: one container behind the host
+# nginx (127.0.0.1:3240). Released by aws/terraform/lightsail in heromiyo/mesa.
+services:
+  web:
+    build: .
+    image: mesa-muse-web
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+      PORT: "8787"
+    volumes:
+      - data:/data
+    ports:
+      - "127.0.0.1:3240:8787"
+volumes:
+  data:
