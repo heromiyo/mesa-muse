@@ -286,6 +286,7 @@ test('adding stock keeps a live shop open; removing every new item is safe', asy
   let state = await (await fetch(`http://localhost:${APP}/api/state`, { headers: AUTH })).json();
   assert.equal(state.shops[0].stage, 'live', 'shop stays open while new stock is reviewed');
   assert.equal(state.shops[0].draft.length, 3);
+  assert.deepEqual(buttonIds(sent.filter((x) => x.to === OWNER).at(-1)!), ['catalog:publish', 'catalog:discard', 'catalog:more']);
 
   // A new customer can still arrive by the link meanwhile.
   await text('260970000003', `Hi! #${code}`);
@@ -304,6 +305,21 @@ test('adding stock keeps a live shop open; removing every new item is safe', asy
   await tap(OWNER, 'catalog:publish');
   const [refused] = await out(1);
   assert.match(textOf(refused!), /catalog is empty/);
+
+  // New stock on a live shop: added without re-announcing, or discarded without touching the shop.
+  removeAll = false;
+  await hook(OWNER, { type: 'image', image: { id: '1002', mime_type: 'image/jpeg' } });
+  await out(3, 15000);
+  await tap(OWNER, 'catalog:discard');
+  const [gone] = await out(1);
+  assert.match(textOf(gone!), /discarded/);
+  await hook(OWNER, { type: 'image', image: { id: '1002', mime_type: 'image/jpeg' } });
+  await out(3, 15000);
+  await tap(OWNER, 'catalog:publish');
+  const [added] = await out(1);
+  assert.match(textOf(added!), /Added 3 products/);
+  state = await (await fetch(`http://localhost:${APP}/api/state`, { headers: AUTH })).json();
+  assert.equal(state.shops[0].products.length, 6);
 });
 
 test('owner browsing their own shop as a customer can still answer questions', async () => {

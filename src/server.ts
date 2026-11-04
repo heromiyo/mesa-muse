@@ -16,10 +16,10 @@ const app = new Hono();
 
 // The control room shows customers' numbers, chats and voice notes, so it is private.
 // Only the WhatsApp webhook and the health check are public.
+// Fail closed: a tunnel or container can expose the port whatever PUBLIC_URL says.
 const password = process.env.CONTROL_PASSWORD ?? '';
-const isPublic = !/^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(config.publicUrl);
-if (isPublic && !password) {
-  console.error('CONTROL_PASSWORD must be set when PUBLIC_URL is a public address.');
+if (!password && process.env.ALLOW_OPEN_CONTROL_ROOM !== '1') {
+  console.error('Set CONTROL_PASSWORD (or ALLOW_OPEN_CONTROL_ROOM=1 for local development only).');
   process.exit(1);
 }
 const guard = password ? basicAuth({ username: process.env.CONTROL_USER ?? 'mesa', password }) : undefined;

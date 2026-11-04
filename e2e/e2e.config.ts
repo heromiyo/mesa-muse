@@ -16,7 +16,7 @@ export default {
     engine: web(),
     app: {
       url: 'http://127.0.0.1:8797',
-      command: { executable: 'node', args: [path.join(import.meta.dirname, 'serve.ts')], env: { PORT: '8797' }, log: '.e2e/logs/app.log' },
+      command: { executable: 'node', args: [path.join(import.meta.dirname, 'serve.ts')], env: { PORT: '8797', ALLOW_OPEN_CONTROL_ROOM: '1' }, log: '.e2e/logs/app.log' },
     },
   }],
 } satisfies E2EConfig;

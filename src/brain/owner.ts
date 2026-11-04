@@ -79,6 +79,11 @@ async function showDraft(to: string, shop: Shop) {
   const file = await saveMedia(`sheet-${shop.id}-${Date.now()}.jpg`, sheet);
   const id = await uploadMedia(sheet, 'image/jpeg', 'catalog.jpg');
   await sendImage(to, id, items.map((it, i) => `${i + 1}. *${it.name}* — ${kwacha(it.price_ngwee)}\n   ${it.description}`).join('\n'), publicMedia(file));
+  if (shop.stage === 'live') {
+    return sendButtons(to,
+      'This is *new stock* — your shop stays open meanwhile. Fix it by voice or text (e.g. "number 2 is K30"). Your messages change this new stock until you add or discard it.',
+      [{ id: 'catalog:publish', title: '✅ Add to my shop' }, { id: 'catalog:discard', title: '🗑️ Discard new stock' }, { id: 'catalog:more', title: '📸 Add more' }]);
+  }
   await sendButtons(to,
     'Fix anything by voice or text — e.g. "number 2 is K30, remove 4". Send another photo to add more.',
     [{ id: 'catalog:publish', title: '🚀 Open my shop' }, { id: 'catalog:more', title: '📸 Add more' }]);
@@ -90,7 +95,9 @@ async function publish(to: string, shop: Shop) {
   const now = Date.now();
   const insert = db.prepare('INSERT INTO products (shop_id, name, description, price_ngwee, image, created_at) VALUES (?, ?, ?, ?, ?, ?)');
   for (const it of items) insert.run(shop.id, it.name, it.description, it.price_ngwee, it.image, now);
+  const wasLive = shop.stage === 'live';
   updateShop(shop.id, { draft: null, stage: 'live' });
+  if (wasLive) return sendText(to, `✅ Added ${items.length} product${items.length === 1 ? '' : 's'} to *${shop.name}*. Customers see them now.`);
   const link = shopLink(shop);
   const qr = await QRCode.toBuffer(link, { width: 640, margin: 2, color: { dark: '#1f3a2e', light: '#f6f1e7' } });
   const file = await saveMedia(`qr-${shop.code}.png`, qr);
@@ -110,7 +117,7 @@ async function editDraft(m: Inbound, shop: Shop) {
     return sendText(m.from, `${reply}\n\n📸 Nothing left in the draft — send a new photo when you're ready.`);
   }
   updateShop(shop.id, { draft: JSON.stringify(next) });
-  await sendText(m.from, reply);
+  await sendText(m.from, shop.stage === 'live' ? `🆕 New stock: ${reply}` : reply);
   if (ops.length) return showDraft(m.from, { ...shop, draft: JSON.stringify(next) });
 }
 
@@ -166,6 +173,10 @@ export async function ownerTurn(m: Inbound, shop: Shop) {
   }
   if (id === 'catalog:publish') return publish(m.from, shop);
   if (id === 'catalog:more') return sendText(m.from, '📸 Send the next photo.');
+  if (id === 'catalog:discard') {
+    updateShop(shop.id, { draft: null });
+    return sendText(m.from, 'New stock discarded. Your shop is unchanged.');
+  }
   if (id.startsWith('answer:')) {
     updateShop(shop.id, { answering: id.slice(7) });
     return sendText(m.from, '🎙️ Send your answer — voice note or text — and I will pass it on.');

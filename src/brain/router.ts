@@ -1,5 +1,5 @@
 import { bus } from '../bus.ts';
-import { createShop, db, person, shopById, shopByCode, shopByOwner, updatePerson, type Shop } from '../db.ts';
+import { createShop, db, person, shopById, shopByCode, shopByOwner, updatePerson, updateShop, type Shop } from '../db.ts';
 import { markReadTyping, sendButtons, sendList, sendText } from '../whatsapp/cloud.ts';
 import type { Inbound } from '../whatsapp/inbound.ts';
 import { customerTurn, greetCustomer } from './customer.ts';
@@ -27,6 +27,9 @@ async function chooseRole(m: Inbound) {
 }
 
 async function becomeCustomer(phone: string, shop: Shop) {
+  // An owner who leaves for another shop drops any answer they had not sent.
+  const owned = shopByOwner(phone);
+  if (owned?.answering && owned.id !== shop.id) updateShop(owned.id, { answering: null });
   updatePerson(phone, { role: 'customer', shop_id: shop.id, history: '[]', cart: '[]' });
   await greetCustomer(phone, shop);
 }
@@ -61,7 +64,7 @@ export async function handle(m: Inbound) {
 
   if (me.role === 'owner' && owned) return ownerTurn(m, owned);
   // Order and answer buttons (and the answer that follows) reach the owner even while they browse their own shop as a customer.
-  if (owned && (m.replyId?.startsWith('order:') || m.replyId?.startsWith('answer:') || (owned.answering && (m.kind === 'text' || m.kind === 'voice'))))
+  if (owned && (m.replyId?.startsWith('order:') || m.replyId?.startsWith('answer:') || (owned.answering && me.shop_id === owned.id && (m.kind === 'text' || m.kind === 'voice'))))
     return ownerTurn(m, owned);
   if (me.role === 'customer' && me.shop_id) {
     const shop = shopById(me.shop_id);
